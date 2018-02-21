@@ -1,6 +1,8 @@
 const express = require('express');
 const app = express();
 var bodyParser = require('body-parser');
+var ObjectId = require('mongodb').ObjectId;
+
 app.use(bodyParser.json()); // support json encoded bodies
 app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
 
@@ -18,8 +20,8 @@ MongoClient.connect('mongodb://test:test@ds125068.mlab.com:25068/healthoutloud',
 
 	// only start the server if the database is running
 	app.listen(3000, () => {
-	    console.log('listening on 3000')
-	    console.log("Server is up and running!")
+		console.log('listening on 3000')
+		console.log("Server is up and running!")
 	});
 });
 
@@ -45,7 +47,7 @@ app.post('/user', (req, res) => {
 	db.collection('user').save(req.body, (err, result) => {
 		if (err) return console.log(err);
 
-		res.send({'email': req.email});
+		res.send({ 'email': req.email });
 	});
 });
 
@@ -56,7 +58,9 @@ app.put('/user', (req, res) => {
 //TODO: Request parameter validation, etc feeling should be an array
 
 //POST ENDPOINTS
-app.post('/post', (req, res) => { 
+
+// Create a new post
+app.post('/post', (req, res) => {
 	//Request must supply post text and a feeling array
 	if (!(req.body.postBody && req.body.feeling)) return res.sendStatus(400); //Bad request, missing parameters
 
@@ -66,34 +70,52 @@ app.post('/post', (req, res) => {
 
 	//Create new post
 	db.collection('post').save(req.body, (err, result) => {
-	    if(err) {
-    		response = {error: true, message: "Error adding data"};
-  		} 
-  		else {
-    		response = {error: false, message: "Data added", id: result._id};
-  		}
-  		res.json(response);
-  	})
+		if (err) {
+			response = { error: true, message: "Error adding data" };
+		}
+		else {
+			response = { error: false, message: "Data added", id: result._id };
+		}
+		res.json(response);
+	})
 
+});
+
+// Get a post by its id
+app.get('/post/:id', (req, res) => {
+
+	// Request does not contain id
+	if (!req.params.id) return res.sendStatus(400); //Bad request, missing parameters
+
+	var query = {
+		"_id":
+			ObjectId(req.params.id)
+	};
+	// Find post based on req.body.id
+	db.collection('post').find(query).toArray(function (err, result) {
+		if (err) return res.status(500).send(err);
+
+		res.json(result);
+	});
 });
 
 //POSTS Endpoints
 
 // Get all posts by a feeling
 app.get('/posts/feeling/:feeling', (req, res) => {
-	db.collection('post').find({feeling: req.params.feeling}).toArray(function(err, result) {
-  		if (err) return res.status(500).send(err);
+	db.collection('post').find({ feeling: req.params.feeling }).toArray(function (err, result) {
+		if (err) return res.status(500).send(err);
 
-  		res.json(result);
+		res.json(result);
 	});
 });
 
 // Get all posts
 app.get('/posts', (req, res) => {
-  	db.collection('post').find().toArray(function(err, result) {
-  		if (err) return res.status(500).send(err);
+	db.collection('post').find().toArray(function (err, result) {
+		if (err) return res.status(500).send(err);
 
-  		res.json(result);
+		res.json(result);
 	});
 });
 
